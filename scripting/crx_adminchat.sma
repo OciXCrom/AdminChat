@@ -1,7 +1,6 @@
 #include <amxmodx>
 #include <amxmisc>
 #include <cstrike>
-#include <fakemeta>
 
 #tryinclude <cromchat>
 
