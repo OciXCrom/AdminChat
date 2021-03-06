@@ -218,7 +218,12 @@ new _agroups
 public plugin_init()
 {
 	// Pause the default adminchat plugin in case it is running
-	pause("ac", "adminchat.amxx")
+	new const OLD_ADMINCHAT[] = "adminchat.amxx"
+	
+	if(pause("cd", OLD_ADMINCHAT))
+	{
+		log_amx("Default %s has been detected and stopped!", OLD_ADMINCHAT)
+	}
 
 	register_plugin("OciXCrom's Admin Chat", PLUGIN_VERSION, "OciXCrom")
 	register_cvar("CRXAdminChat", PLUGIN_VERSION, FCVAR_SERVER|FCVAR_SPONLY|FCVAR_UNLOGGED)
@@ -226,7 +231,7 @@ public plugin_init()
 
 	register_clcmd("say", "OnSay")
 	register_clcmd("say_team", "OnSay")
-	
+
 	register_concmd("ac_reload", "Cmd_Reload", ADMIN_RCON, "-- reloads the Admin Chat configuration file")
 
 	g_tCommandIds = TrieCreate()
