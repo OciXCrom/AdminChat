@@ -1,0 +1,17 @@
+[en] -- OciXCrom
+CRXADMINCHAT_RELOAD_SUCCESS = * Configuration file reloaded successfully!
+CRXADMINCHAT_RELOAD_LOG = %s reloaded the configuration file
+CRXADMINCHAT_MSG_EMPTY = You cannot send an empty message
+CRXADMINCHAT_TEAM_NOT_FOUND = Invalid team "%s"
+
+[mk] -- OciXCrom
+CRXADMINCHAT_RELOAD_SUCCESS = * Konfiguracioniot fajl e uspeshno vchitan!
+CRXADMINCHAT_RELOAD_LOG = %s povtorno go vchita konfiguracioniot fajl
+CRXADMINCHAT_MSG_EMPTY = Ne mozhesh da ispratish prazna poraka
+CRXADMINCHAT_TEAM_NOT_FOUND = Nevaliden tim "%s"
+
+[bg] -- OciXCrom
+CRXADMINCHAT_RELOAD_SUCCESS = * Konfiguracionniq fail e uspeshno zareden!
+CRXADMINCHAT_RELOAD_LOG = %s otnovo zaredi konfiguracionniq fail
+CRXADMINCHAT_MSG_EMPTY = Ne mojesh da izpratish prazno suobshtenie
+CRXADMINCHAT_TEAM_NOT_FOUND = Nevaliden otbor "%s"
