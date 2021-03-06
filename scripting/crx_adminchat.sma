@@ -72,7 +72,7 @@ const MAX_SERVER_NAME_LENGTH  = 64
 const MAX_DESC_LENGTH         = 128
 const MAX_VALUE_LENGTH        = 128
 
-new const GET_PLAYERS_FLAGS[] = "chi"
+new const GET_PLAYERS_FLAGS[] = "ch"
 
 new const ARG_NAME[]          = "$name$"
 new const ARG_MESSAGE[]       = "$message$"
