@@ -219,7 +219,7 @@ public plugin_init()
 {
 	// Pause the default adminchat plugin in case it is running
 	new const OLD_ADMINCHAT[] = "adminchat.amxx"
-	
+
 	if(pause("cd", OLD_ADMINCHAT))
 	{
 		log_amx("Default %s has been detected and stopped!", OLD_ADMINCHAT)
@@ -1190,7 +1190,9 @@ bool:has_argument(const szMessage[], const szArg[])
 }
 
 bool:is_hud_msg(CRXMsgTypes:iMsg)
-return CRXMsgType_Amx_LeftSay <= iMsg <= CRXMsgType_Amx_RightSay2
+{
+	return CRXMsgType_Amx_LeftSay <= iMsg <= CRXMsgType_Amx_RightSay2
+}
 
 play_msg_sound(id, iSender, CRXMsgTypes:iMsg)
 {
