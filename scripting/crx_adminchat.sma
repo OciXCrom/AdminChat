@@ -16,7 +16,7 @@
 	#endif
 #endif
 
-new const PLUGIN_VERSION[] = "4.0"
+new const PLUGIN_VERSION[] = "4.1"
 
 forward cm_on_player_data_updated(id)
 forward crxranks_user_level_updated(id, level, bool:levelup)
@@ -72,7 +72,8 @@ const MAX_SERVER_NAME_LENGTH  = 64
 const MAX_DESC_LENGTH         = 128
 const MAX_VALUE_LENGTH        = 128
 
-new const GET_PLAYERS_FLAGS[] = "ch"
+new const GET_PLAYERS_FLAGS[] = ""
+new const CSTRIKE_MODNAME[]   = "cstrike"
 
 new const ARG_NAME[]          = "$name$"
 new const ARG_MESSAGE[]       = "$message$"
@@ -113,6 +114,7 @@ enum CRXMsgInfo
 	CRXMsgInfo_Cmd[MAX_KEY_LENGTH],
 	CRXMsgInfo_Flag,
 	CRXMsgInfo_Desc[MAX_DESC_LENGTH],
+	bool:CRXMsgInfo_CstrikeOnly,
 	CRXMsgInfo_Args,
 	CRXMsgInfo_Id,
 	CRXMsgInfo_Flag,
@@ -148,7 +150,7 @@ new ADMINCHAT_COMMANDS[CRXMsgTypes][CRXMsgInfo] =
 	{ "amx_chat",      ADMIN_CHAT, "<message> -- sends a message to all VIPs"                                                 },
 	{ "amx_asay",      ADMIN_ALL,  "<message> -- sends a message to all admins"                                               },
 	{ "amx_psay",      ADMIN_CHAT, "<player> <message> -- sends a private message to a player"                                },
-	{ "amx_teamsay",   ADMIN_CHAT, "<team> <message> -- sends a private message to a specific team"                           },
+	{ "amx_teamsay",   ADMIN_CHAT, "<team> <message> -- sends a private message to a specific team", true                     },
 	{ "amx_tsay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the left side of the screen"   },
 	{ "amx_csay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the top of the screen"         },
 	{ "amx_bsay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the bottom of the screen"      },
@@ -212,6 +214,7 @@ new Trie:g_tSayShortcuts
 new Trie:g_tSayTeamShortcuts
 new Trie:g_tHudColors
 
+new bool:g_bIsCstrike
 new g_iHudPos[CRXMsgTypes]
 new _agroups
 
@@ -238,6 +241,11 @@ public plugin_init()
 
 	for(new CRXMsgTypes:i, j, iLen; _:i < sizeof(ADMINCHAT_COMMANDS); i++)
 	{
+		if(!g_bIsCstrike && ADMINCHAT_COMMANDS[i][CRXMsgInfo_CstrikeOnly])
+		{
+			continue
+		}
+
 		TrieSetCell(g_tCommandIds, ADMINCHAT_COMMANDS[i][CRXMsgInfo_Cmd], i)
 
 		ADMINCHAT_COMMANDS[i][CRXMsgInfo_Id] = register_concmd(ADMINCHAT_COMMANDS[i][CRXMsgInfo_Cmd], "OnAdminCmd", ADMINCHAT_COMMANDS[i][CRXMsgInfo_Flag], ADMINCHAT_COMMANDS[i][CRXMsgInfo_Desc])
@@ -265,6 +273,14 @@ public plugin_precache()
 	g_tSayShortcuts = TrieCreate()
 	g_tSayTeamShortcuts = TrieCreate()
 	g_tHudColors = TrieCreate()
+
+	new szModName[sizeof(CSTRIKE_MODNAME)]
+	get_modname(szModName, charsmax(szModName))
+
+	if(equal(szModName, CSTRIKE_MODNAME))
+	{
+		g_bIsCstrike = true
+	}
 
 	ReadFile()
 }
@@ -294,6 +310,11 @@ ReadFile(bool:bReload = false)
 	}
 
 	new iFilePointer = fopen(szFilename, "rt")
+
+	if(!iFilePointer)
+	{
+		set_fail_state("Error opening configuration file.")
+	}
 
 	if(iFilePointer)
 	{
@@ -1084,7 +1105,6 @@ apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessag
 	if(has_argument(szMessage, ARG_MESSAGE))
 	{
 		// Prevent chat exploits.
-		replace_string(szInput, iInputLen, "#", "＃")
 		replace_string(szInput, iInputLen, "%", "％")
 
 		if(!user_has_flag(id, g_eSettings[COLORCHAT_FLAG]))
@@ -1122,6 +1142,11 @@ apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessag
 	}
 }
 
+bool:check_cstrike(CRXMsgTypes:iMsg)
+{
+	return g_bIsCstrike || !ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_CstrikeOnly]
+}
+
 bool:is_team_say(const szCmd[])
 {
 	return szCmd[3] == '_'
@@ -1140,16 +1165,31 @@ bool:is_msg_empty(id, const szMessage[])
 
 set_command_format(CRXMsgTypes:iMsg, const szValue[])
 {
+	if(!check_cstrike(iMsg))
+	{
+		return
+	}
+
 	copy(ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_MsgFormat], charsmax(ADMINCHAT_COMMANDS[][CRXMsgInfo_MsgFormat]), szValue)
 }
 
 set_anonymous_format(CRXMsgTypes:iMsg, const szValue[])
 {
+	if(!check_cstrike(iMsg))
+	{
+		return
+	}
+
 	copy(ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_AnonymousFormat], charsmax(ADMINCHAT_COMMANDS[][CRXMsgInfo_AnonymousFormat]), szValue)
 }
 
 set_command_shortcut(CRXMsgTypes:iMsg, const szValue[])
 {
+	if(!check_cstrike(iMsg))
+	{
+		return
+	}
+
 	static szType[MAX_SAY_CMD_LENGTH], szChar[MAX_SYMBOL_LENGTH]
 	parse(szValue, szType, charsmax(szType), szChar, charsmax(szChar))
 	TrieSetCell(is_team_say(szType) ? g_tSayTeamShortcuts : g_tSayShortcuts, szChar, iMsg)
@@ -1157,7 +1197,7 @@ set_command_shortcut(CRXMsgTypes:iMsg, const szValue[])
 
 set_command_sound(CRXMsgTypes:iMsg, const szSound[], bool:bReload)
 {
-	if(bReload)
+	if(bReload || !check_cstrike(iMsg))
 	{
 		return
 	}
@@ -1168,6 +1208,11 @@ set_command_sound(CRXMsgTypes:iMsg, const szSound[], bool:bReload)
 
 set_command_sound_self(CRXMsgTypes:iMsg, const szValue[])
 {
+	if(!check_cstrike(iMsg))
+	{
+		return
+	}
+
 	ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_SoundNoSelf] = _:clamp(str_to_num(szValue), false, true)
 }
 
@@ -1259,6 +1304,7 @@ CC__SendToFlag(id, CRXMsgTypes:iMsg, iFlag, const szMessage[])
 public plugin_natives()
 {
 	set_native_filter("native_filter")
+	set_module_filter("module_filter")
 }
 
 public native_filter(const szNative[], id, iTrap)
@@ -1277,4 +1323,9 @@ public native_filter(const szNative[], id, iTrap)
 	}
 
 	return PLUGIN_CONTINUE
+}
+
+public module_filter(const szLibrary[])
+{
+	return equal(szLibrary, CSTRIKE_MODNAME) ? PLUGIN_HANDLED : PLUGIN_CONTINUE
 }
