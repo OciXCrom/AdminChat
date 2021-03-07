@@ -16,7 +16,7 @@
 	#endif
 #endif
 
-new const PLUGIN_VERSION[] = "4.1"
+new const PLUGIN_VERSION[] = "4.1.1"
 
 forward cm_on_player_data_updated(id)
 forward crxranks_user_level_updated(id, level, bool:levelup)
@@ -827,7 +827,7 @@ public OnAdminCmd(id, iLevel, iCid)
 	if(ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_Args] > 1)
 	{
 		parse(szInput, szArg, charsmax(szArg))
-		replace_string(szInput, charsmax(szInput), szArg, "")
+		replace(szInput, charsmax(szInput), szArg, "")
 		trim(szInput)
 
 		if(is_hud_msg(iMsg))
