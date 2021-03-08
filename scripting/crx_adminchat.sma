@@ -16,7 +16,7 @@
 	#endif
 #endif
 
-new const PLUGIN_VERSION[] = "4.1.1"
+new const PLUGIN_VERSION[] = "4.1.2"
 
 forward cm_on_player_data_updated(id)
 forward crxranks_user_level_updated(id, level, bool:levelup)
@@ -1105,7 +1105,7 @@ apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessag
 	if(has_argument(szMessage, ARG_MESSAGE))
 	{
 		// Prevent chat exploits.
-		replace_string(szInput, iInputLen, "%", "％")
+		CC_RemoveExploits(szInput, iInputLen)
 
 		if(!user_has_flag(id, g_eSettings[COLORCHAT_FLAG]))
 		{
