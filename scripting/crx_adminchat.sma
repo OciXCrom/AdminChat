@@ -16,7 +16,7 @@
 	#endif
 #endif
 
-new const PLUGIN_VERSION[] = "4.1.2"
+new const PLUGIN_VERSION[] = "4.2"
 
 forward cm_on_player_data_updated(id)
 forward crxranks_user_level_updated(id, level, bool:levelup)
@@ -72,7 +72,7 @@ const MAX_SERVER_NAME_LENGTH  = 64
 const MAX_DESC_LENGTH         = 128
 const MAX_VALUE_LENGTH        = 128
 
-new const GET_PLAYERS_FLAGS[] = ""
+new const GET_PLAYERS_FLAGS[] = "ch"
 new const CSTRIKE_MODNAME[]   = "cstrike"
 
 new const ARG_NAME[]          = "$name$"
@@ -133,6 +133,8 @@ enum CRXMsgTypes
 	CRXMsgType_Amx_AdminSay,
 	CRXMsgType_Amx_PrivateSay,
 	CRXMsgType_Amx_TeamSay,
+	CRXMsgType_Amx_RawSay,
+	/* End of chat messages */
 	CRXMsgType_Amx_LeftSay,
 	CRXMsgType_Amx_TopSay,
 	CRXMsgType_Amx_BottomSay,
@@ -141,7 +143,8 @@ enum CRXMsgTypes
 	CRXMsgType_Amx_TopSay2,
 	CRXMsgType_Amx_BottomSay2,
 	CRXMsgType_Amx_RightSay2,
-	CRXMsgType_Amx_CenterSay
+	CRXMsgType_Amx_CenterSay,
+	CRXMsgType_Amx_Speak
 }
 
 new ADMINCHAT_COMMANDS[CRXMsgTypes][CRXMsgInfo] = 
@@ -151,6 +154,7 @@ new ADMINCHAT_COMMANDS[CRXMsgTypes][CRXMsgInfo] =
 	{ "amx_asay",      ADMIN_ALL,  "<message> -- sends a message to all admins"                                               },
 	{ "amx_psay",      ADMIN_CHAT, "<player> <message> -- sends a private message to a player"                                },
 	{ "amx_teamsay",   ADMIN_CHAT, "<team> <message> -- sends a private message to a specific team", true                     },
+	{ "amx_rawsay",    ADMIN_RCON, "<message> -- sends a raw (unformatted) message to all players",                           },
 	{ "amx_tsay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the left side of the screen"   },
 	{ "amx_csay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the top of the screen"         },
 	{ "amx_bsay",      ADMIN_CHAT, "<color> <message> -- sends a HUD message to all players on the bottom of the screen"      },
@@ -159,7 +163,8 @@ new ADMINCHAT_COMMANDS[CRXMsgTypes][CRXMsgInfo] =
 	{ "amx_csay2",     ADMIN_BAN,  "<color> <message> -- sends a DHUD message to all players on the top of the screen"        },
 	{ "amx_bsay2",     ADMIN_BAN,  "<color> <message> -- sends a DHUD message to all players on the bottom of the screen"     },
 	{ "amx_rsay2",     ADMIN_BAN,  "<color> <message> -- sends a DHUD message to all players on the right side of the screen" },
-	{ "amx_centersay", ADMIN_CHAT, "<message> -- sends a chat-style message in the center of the screen"                      }
+	{ "amx_centersay", ADMIN_CHAT, "<message> -- sends a chat-style message in the center of the screen"                      },
+	{ "amx_speak",     ADMIN_RCON, "<message> -- attempts to speak a message using vox or plays a sound to all players"       }
 }
 
 enum Settings
@@ -176,6 +181,7 @@ enum Settings
 	ADMIN_PREFIX[MAX_KEY_LENGTH],
 	VIP_PREFIX[MAX_KEY_LENGTH],
 	PLAYER_PREFIX[MAX_KEY_LENGTH],
+	NEWLINE_SHORTCUT[MAX_KEY_LENGTH],
 	AMX_CHAT_FLAG,
 	AMX_ASAY_FLAG,
 	AMX_PSAY_FLAG,
@@ -220,7 +226,7 @@ new _agroups
 
 public plugin_init()
 {
-	// Pause the default adminchat plugin in case it is running
+	// Pause the default adminchat plugin in case it is running.
 	new const OLD_ADMINCHAT[] = "adminchat.amxx"
 
 	if(pause("cd", OLD_ADMINCHAT))
@@ -262,6 +268,13 @@ public plugin_init()
 		}
 	}
 
+	// Set default format for formatless messages.
+	set_command_format(CRXMsgType_Amx_RawSay, ARG_MESSAGE)
+	set_anonymous_format(CRXMsgType_Amx_RawSay, ARG_MESSAGE)
+
+	set_command_format(CRXMsgType_Amx_Speak, ARG_MESSAGE)
+	set_anonymous_format(CRXMsgType_Amx_Speak, ARG_MESSAGE)
+
 	if(LibraryExists("agroups", LibType_Library))
 	{
 		_agroups = true
@@ -277,7 +290,7 @@ public plugin_precache()
 	new szModName[sizeof(CSTRIKE_MODNAME)]
 	get_modname(szModName, charsmax(szModName))
 
-	if(equal(szModName, CSTRIKE_MODNAME))
+	if(equal(szModName, CSTRIKE_MODNAME) || equal(szModName, "czero"))
 	{
 		g_bIsCstrike = true
 	}
@@ -424,6 +437,10 @@ ReadFile(bool:bReload = false)
 							{
 								copy(g_eSettings[PLAYER_PREFIX], charsmax(g_eSettings[PLAYER_PREFIX]), szValue)
 							}
+							else if(equal(szKey, "NEWLINE_SHORTCUT"))
+							{
+								copy(g_eSettings[NEWLINE_SHORTCUT], charsmax(g_eSettings[NEWLINE_SHORTCUT]), szValue)
+							}
 							else if(equal(szKey, "AMX_SAY_FORMAT"))
 							{
 								set_command_format(CRXMsgType_Amx_Say, szValue)
@@ -540,6 +557,18 @@ ReadFile(bool:bReload = false)
 							{
 								set_command_sound_self(CRXMsgType_Amx_TeamSay, szValue)
 							}
+							else if(equal(szKey, "AMX_RAWSAY_SHORTCUT"))
+							{
+								set_command_shortcut(CRXMsgType_Amx_RawSay, szValue)
+							}
+							else if(equal(szKey, "AMX_RAWSAY_SOUND"))
+							{
+								set_command_sound(CRXMsgType_Amx_RawSay, szValue, bReload)
+							}
+							else if(equal(szKey, "AMX_RAWSAY_SOUND_NOSELF"))
+							{
+								set_command_sound_self(CRXMsgType_Amx_RawSay, szValue)
+							}
 							else if(equal(szKey, "AMX_CENTERSAY_FORMAT"))
 							{
 								set_command_format(CRXMsgType_Amx_CenterSay, szValue)
@@ -619,6 +648,10 @@ ReadFile(bool:bReload = false)
 								{
 									set_command_sound_self(iMsg, szValue)	
 								}
+							}
+							else if(equal(szKey, "AMX_SPEAK_SHORTCUT"))
+							{
+								set_command_shortcut(CRXMsgType_Amx_Speak, szValue)
 							}
 							else if(equal(szKey, "HUD_FXTIME"))
 							{
@@ -930,7 +963,7 @@ send_custom_message(id, szArg[MAX_NAME_LENGTH], szInput[CC_MAX_MESSAGE_SIZE], CR
 		}
 	}
 
-	apply_replacements(id, szArg, szInput, charsmax(szInput), szMessage, charsmax(szMessage), szName, charsmax(szName))
+	apply_replacements(id, szArg, szInput, charsmax(szInput), szMessage, charsmax(szMessage), szName, charsmax(szName), iMsg)
 
 	if(is_msg_empty(id, szInput))
 	{
@@ -939,7 +972,7 @@ send_custom_message(id, szArg[MAX_NAME_LENGTH], szInput[CC_MAX_MESSAGE_SIZE], CR
 
 	switch(iMsg)
 	{
-		case CRXMsgType_Amx_Say:
+		case CRXMsgType_Amx_Say, CRXMsgType_Amx_RawSay:
 		{
 			CC__SendMatched(0, id, iMsg, true, szMessage)
 		}
@@ -1012,7 +1045,13 @@ send_custom_message(id, szArg[MAX_NAME_LENGTH], szInput[CC_MAX_MESSAGE_SIZE], CR
 		case CRXMsgType_Amx_CenterSay:
 		{
 			client_print(0, print_center, szMessage)
+			client_print(0, print_console, "[CENTER] %s", szMessage)
 			play_msg_sound(0, id, iMsg)
+		}
+		case CRXMsgType_Amx_Speak:
+		{
+			client_speak(0, szMessage)
+			client_print(0, print_console, "[SPEAK] %s", szMessage)
 		}
 		default:
 		{
@@ -1051,7 +1090,8 @@ send_custom_message(id, szArg[MAX_NAME_LENGTH], szInput[CC_MAX_MESSAGE_SIZE], CR
 
 	if(g_eSettings[LOG_MESSAGES])
 	{
-		formatex(szMessage, charsmax(szMessage), "[%s%s] %s: %s%s%s", szCmd, bAnonymous ? " - A" : "", is_user_connected(id) ? szName : "", szArg, szArg[0] ? " " : "", szInput)
+		CC_RemoveColors(szName, charsmax(szName))
+		formatex(szMessage, charsmax(szMessage), "[%s%s] %s: %s%s%s", szCmd, bAnonymous ? " - A" : "", szName, szArg, szArg[0] ? " " : "", szInput)
 
 		if(g_eSettings[LOG_FILE][0] == '!')
 		{
@@ -1064,7 +1104,7 @@ send_custom_message(id, szArg[MAX_NAME_LENGTH], szInput[CC_MAX_MESSAGE_SIZE], CR
 	}
 }
 
-apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessageLen, szName[], iNameLen)
+apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessageLen, szName[], iNameLen, CRXMsgTypes:iMsg)
 {
 	if(has_argument(szMessage, ARG_ADMRANK))
 	{
@@ -1112,33 +1152,54 @@ apply_replacements(id, const szArg[], szInput[], iInputLen, szMessage[], iMessag
 			CC_RemoveColors(szInput, iInputLen)
 		}
 
+		// Check if the setting exists since it was added in v4.2
+		if(g_eSettings[NEWLINE_SHORTCUT][0] && has_argument(szInput, g_eSettings[NEWLINE_SHORTCUT]))
+		{
+			static const NEWLINE_SYMBOL[] = "^n"
+			replace_string(szInput, iInputLen, g_eSettings[NEWLINE_SHORTCUT], NEWLINE_SYMBOL)
+		}
+
 		replace_string(szMessage, iMessageLen, ARG_MESSAGE, szInput)
 	}
 
-	if(has_argument(szMessage, ARG_CUSTOM_NAME))
+	// Keywords below can be used in the message itself - handy little secret.
+	// Format name even if not used in the message since it's used in the logs.
+	if(is_user_connected(id))
 	{
-		replace_string(szMessage, iMessageLen, ARG_CUSTOM_NAME, g_ePlayerData[id][PlayerData_CustomName])
+		get_user_name(id, szName, iNameLen)
+	}
+	else
+	{
+		if(g_eSettings[SERVER_NAME_USE_HOSTNAME])
+		{
+			get_user_name(0, szName, iNameLen)
+		}
+		else
+		{
+			copy(szName, iNameLen, g_eSettings[SERVER_NAME])
+		}
 	}
 
 	if(has_argument(szMessage, ARG_NAME))
 	{
+		replace_string(szMessage, iMessageLen, ARG_NAME, szName)
+	}
+
+	if(has_argument(szMessage, ARG_CUSTOM_NAME))
+	{
 		if(is_user_connected(id))
 		{
-			get_user_name(id, szName, iNameLen)
-			replace_string(szMessage, iMessageLen, ARG_NAME, szName)
+			replace_string(szMessage, iMessageLen, ARG_CUSTOM_NAME, g_ePlayerData[id][PlayerData_CustomName])
 		}
 		else
 		{
-			if(g_eSettings[SERVER_NAME_USE_HOSTNAME])
-			{
-				get_user_name(0, szName, iNameLen)
-				replace_string(szMessage, iMessageLen, ARG_NAME, szName)
-			}
-			else
-			{
-				replace_string(szMessage, iMessageLen, ARG_NAME, g_eSettings[SERVER_NAME])
-			}
+			replace_string(szMessage, iMessageLen, ARG_CUSTOM_NAME, szName)
 		}
+	}
+
+	if(CRXMsgType_Amx_LeftSay <= iMsg <= CRXMsgType_Amx_CenterSay)
+	{
+		CC_RemoveColors(szMessage, iMessageLen)
 	}
 }
 
@@ -1154,13 +1215,33 @@ bool:is_team_say(const szCmd[])
 
 bool:is_msg_empty(id, const szMessage[])
 {
-	if(!szMessage[0] && !g_eSettings[ALLOW_EMPTY_MESSAGES])
+	if(g_eSettings[ALLOW_EMPTY_MESSAGES])
+	{
+		return false
+	}
+
+	if(!szMessage[0] || has_only_spaces(szMessage))
 	{
 		client_print(id, print_console, "%L", id, "CRXADMINCHAT_MSG_EMPTY")
-		return true
+		return true		
 	}
 
 	return false
+}
+
+bool:has_only_spaces(const szMessage[])
+{
+	new iLen = strlen(szMessage)
+
+	for(new i; i < iLen; i++)
+	{
+		if(szMessage[i] != ' ')
+		{
+			return false
+		}
+	}
+
+	return true
 }
 
 set_command_format(CRXMsgTypes:iMsg, const szValue[])
@@ -1197,7 +1278,7 @@ set_command_shortcut(CRXMsgTypes:iMsg, const szValue[])
 
 set_command_sound(CRXMsgTypes:iMsg, const szSound[], bool:bReload)
 {
-	if(bReload || !check_cstrike(iMsg))
+	if(bReload || !szSound[0] || !check_cstrike(iMsg))
 	{
 		return
 	}
@@ -1251,7 +1332,12 @@ play_msg_sound(id, iSender, CRXMsgTypes:iMsg)
 		return
 	}
 
-	client_cmd(id, "spk ^"%s^"", ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_Sound])
+	client_speak(id, ADMINCHAT_COMMANDS[iMsg][CRXMsgInfo_Sound])
+}
+
+client_speak(id, const szMessage[])
+{
+	client_cmd(id, "spk ^"%s^"", szMessage)
 }
 
 CC__SendMatched(id, iSender, CRXMsgTypes:iMsg, bool:bPlaySound, const szMessage[])
