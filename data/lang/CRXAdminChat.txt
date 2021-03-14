@@ -15,3 +15,9 @@ CRXADMINCHAT_RELOAD_SUCCESS = * Konfiguracionniq fail e uspeshno zareden!
 CRXADMINCHAT_RELOAD_LOG = %s otnovo zaredi konfiguracionniq fail
 CRXADMINCHAT_MSG_EMPTY = Ne mojesh da izpratish prazno suobshtenie
 CRXADMINCHAT_TEAM_NOT_FOUND = Nevaliden otbor "%s"
+
+[de] -- rian
+CRXADMINCHAT_RELOAD_SUCCESS = * Konfigurationsdatei erfolgreich neu geladen!
+CRXADMINCHAT_RELOAD_LOG = %s hat die Konfigurationsdatei neu geladen
+CRXADMINCHAT_MSG_EMPTY = Du kannst keine leeren Nachrichten senden
+CRXADMINCHAT_TEAM_NOT_FOUND = Ungültiges Team "%s"
