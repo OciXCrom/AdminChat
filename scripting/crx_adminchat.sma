@@ -8,6 +8,10 @@
 	#error "cromchat.inc" is missing in your "scripting/include" folder. Download it from: "https://amxx-bg.info/inc/"
 #endif
 
+#if !defined CC_RemoveExploits
+	#error Your "cromchat.inc" is outdated. Please replace it with the one attached in the archive.
+#endif
+
 #if AMXX_VERSION_NUM < 183 || !defined set_dhudmessage
 	#tryinclude <dhudmessage>
 
