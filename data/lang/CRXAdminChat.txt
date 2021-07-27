@@ -21,3 +21,9 @@ CRXADMINCHAT_RELOAD_SUCCESS = * Konfigurationsdatei erfolgreich neu geladen!
 CRXADMINCHAT_RELOAD_LOG = %s hat die Konfigurationsdatei neu geladen
 CRXADMINCHAT_MSG_EMPTY = Du kannst keine leeren Nachrichten senden
 CRXADMINCHAT_TEAM_NOT_FOUND = Ungültiges Team "%s"
+
+[bp] -- Zetsukt
+CRXADMINCHAT_RELOAD_SUCCESS = * Arquivo de configuracao recarregado com sucesso!
+CRXADMINCHAT_RELOAD_LOG = %s recarregou o arquivo de configuracao
+CRXADMINCHAT_MSG_EMPTY = Voce nao pode enviar uma mensagem vazia
+CRXADMINCHAT_TEAM_NOT_FOUND = Time invalido "%s"
